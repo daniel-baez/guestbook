@@ -1,11 +1,12 @@
 (defproject guestbook "0.1.0-SNAPSHOT"
-
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
-
   :dependencies [[luminus-log4j "0.1.3"]
                  [org.clojure/clojure "1.8.0"]
                  [selmer "1.0.6"]
+                 [cljs-ajax "0.5.2"]
+                 [reagent "0.5.1"]
+                 [org.clojure/clojurescript "1.7.228" :scope "provided"]
                  [markdown-clj "0.9.89"]
                  [ring-middleware-format "0.7.0"]
                  [metosin/ring-http-response "0.7.0"]
@@ -32,13 +33,28 @@
 
   :jvm-opts ["-server" "-Dconf=.lein-env"]
   :source-paths ["src/clj"]
-  :resource-paths ["resources"]
+  :resource-paths ["resources", "target/cljsbuild"]
   :target-path "target/%s/"
+  :cljsbuild
+  {:builds {:app {:source-paths ["src/cljs"]
+                  :compiler {:output-to "target/cljsbuild/public/js/app.js"
+                             :output-dir "target/cljsbuild/public/js/out"
+                             :main "guestbook.core"
+                             :asset-path "/js/out"
+                             :optimizations :none
+                             :source-map true
+                             :pretty-print true }}}}
+  :clean-targets ^{:protect false}
+  [:target-path 
+   [:cljsbuild :builds :app :compiler :output-dir]
+   [:cljsbuild :builds :app :compiler :output-to]]
+
   :main guestbook.core
   :migratus {:store :database :db ~(get (System/getenv) "DATABASE_URL")}
 
   :plugins [[lein-cprop "1.0.1"]
             [migratus-lein "0.3.7"]
+            [lein-cljsbuild "1.1.1"]
             [lein-immutant "2.1.0"]]
 
   :profiles
