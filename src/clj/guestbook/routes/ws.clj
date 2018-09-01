@@ -1,32 +1,23 @@
 (ns guestbook.routes.ws
-  (:require [compojure.core :refer [GET defroutes]]
+  (:require [compojure.core :refer [GET POST defroutes]]
             [clojure.tools.logging :as log]
-            [immutant.web.async :as async]
-            [cognitect.transit :as transit]
+            [mount.core :refer [defstate]]
+            [taoensso.sente :as sente]
+            [taoensso.sente.server-adapters.immutant 
+             :refer [sente-web-server-adapter]]
             [bouncer.core :as b]
             [bouncer.validators :as v]
             [guestbook.db.core :as db]))
 
-(defonce channels (atom #{}))
-
-(defn connect! [channel]
-  (log/info "channel open")
-  (swap! channels conj channel))
-
-(defn disconnect! [channel {:keys [code reason]}]
-  (log/info "clore code: " code " reason: " reason)
-  (swap! channels clojure.set/difference #{channel}))
-
-(defn encode-transit [message]
-  (let [out (java.io.ByteArrayOutputStream. 4096)
-        writer (transit/writer out :json)]
-    (transit/write writer message)
-    (.toString out)))
-
-(defn decode-transit [message]
-  (let [in (java.io.ByteArrayInputStream. (.getBytes message))
-        reader (transit/reader in :json)]
-    (transit/read reader)))
+(let [connection (sente/make-channel-socket!
+                   sente-web-server-adapter 
+                   {:user-id-fn 
+                    (fn [req] (get-in req [:params :client-id]))})]
+  (def chsk-send! (:send-fn connection))
+  (def connected-uids (:connected-uids connection))
+  (def ch-chsk (:ch-recv connection))
+  (def ring-ajax-get-or-ws-handshake (:ajax-get-or-ws-handshake-fn connection))
+  (def ring-ajax-post (:ajax-post-fn connection)))
 
 (defn validate-message [message]
   (first
@@ -43,22 +34,27 @@
       (db/save-message! message)
       message)))
 
-(defn handle-message! [channel message]
-  (let [response (-> message 
-                     decode-transit
-                     (assoc :timestamp (java.util.Date.))
-                     save-message!)]
-    (if (:errors response)
-      (async/send! channel (encode-transit response))
-      (doseq [channel @channels]
-        (async/send! channel (encode-transit response))))))
+(defn handle-message! [{:keys [id client-id ?data]}]
+  (when (= :guestbook/add-message id)
+    (let [response (-> ?data 
+                       (assoc :timestamp (java.util.Date.))
+                       save-message!)]
+      (if (:errors response)
+        (chsk-send! client-id [:guestbook/error response])
+        (doseq [uid (:any @connected-uids)]
+          (chsk-send! uid [:guestbook/add-message response]))))))
 
-(defn ws-handler [request]
-  (async/as-channel request
-                    {:on-open connect!
-                     :on-close disconnect!
-                     :on-message handle-message!}))
+(defn start-router! []
+  (sente/start-chsk-router! ch-chsk handle-message!))
+
+(defn stop-router! [stop-fn]
+  (when stop-fn (stop-fn)))
+
+(defstate router
+  :start (start-router!)
+  :stop (stop-router! router))
 
 (defroutes ws-routes
-  (GET "/ws" request (ws-handler request)))
+  (GET "/ws" r (ring-ajax-get-or-ws-handshake r))
+  (POST "/ws" r (ring-ajax-post r)))
 

@@ -45,11 +45,13 @@
 
     [:input.btn.btn-primary 
      {:type :submit 
-      :on-click #(ws/send-message! @fields)
+      :on-click #(ws/send-message! [:guestbook/add-message @fields] 8000)
       :value "Comment!"}]]])
 
 (defn response-handler [messages fields errors]
-  (fn [message]
+  (fn [{[msg-id message] :?data}]
+    (.log js/console (str "msg-id: " msg-id))
+    (.log js/console (str "message: " message))
     (if-let [response-errors (:errors message)]
       (reset! errors response-errors)
       (do
@@ -61,8 +63,7 @@
   (let [messages (atom nil)
         fields (atom nil)
         errors (atom nil)]
-    (ws/connect! (str "ws://" (.-host js/location) "/ws")
-                 (response-handler messages fields errors))
+    (ws/start-router! (response-handler messages fields errors))
     (get-messages messages)
     (fn []
       [:div
@@ -72,6 +73,4 @@
         [:div.span12
          [messages-list messages]]]])))
 
-(reagent/render
-  [home]
-  (.getElementById js/document "content"))
+(reagent/render [home] (.getElementById js/document "content"))

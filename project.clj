@@ -6,6 +6,7 @@
                  [selmer "1.0.6"]
                  [cljs-ajax "0.5.2"]
                  [reagent "0.5.1"]
+                 [com.taoensso/sente "1.13.1"]
                  [org.clojure/clojurescript "1.7.228" :scope "provided"]
                  [markdown-clj "0.9.89"]
                  [ring-middleware-format "0.7.0"]

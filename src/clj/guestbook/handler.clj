@@ -14,10 +14,14 @@
 
 (def app-routes
   (routes
-    #'ws-routes
+    (-> #'ws-routes
+        (ring.middleware.keyword-params/wrap-keyword-params)
+        (ring.middleware.params/wrap-params))
+
     (-> #'home-routes
         (wrap-routes middleware/wrap-csrf)
         (wrap-routes middleware/wrap-formats))
+
     (route/not-found
       (:body
         (error-page {:status 404
