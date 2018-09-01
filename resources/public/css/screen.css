@@ -30,37 +30,38 @@ body {
     margin-left: 1rem;
   }
 }
-
+/*START:guestbook
+*/
 .content {
-  background: white;
-  width: 520px;
-  padding: 30px;
+	background: white;
+	width: 520px;
 }
-
-.error {
-  width: 520px;
-  padding: 30px;
-  margin-bottom: 50px;
-  position: relative;
-  background: white;
+form, .error {
+	width: 520px;
+	padding: 30px;
+	margin-bottom: 50px;
+	position: relative;
+	background: white;
 }
-
 ul {
-  list-style: none;
+	list-style: none;
 }
 
 li {
-  position: relative;
-  font-size: 16px;
-  padding: 5px;
-  border-bottom: 1px dotted #ccc;
+	position: relative;
+	font-size: 16px;
+	padding: 5px;
+	border-bottom: 1px dotted #ccc;
 }
 
 li:last-child {
-  border-bottom: none
+	border-bottom: none;
 }
 
-li:time {
-  font-size: 12px;
-  padding-bottom: 20px;
+li time {
+	font-size: 12px;
+	padding-bottom: 20px;
 }
+/*END:guestbook
+*/
+

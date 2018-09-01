@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<!--
+ ! Excerpted from "Web Development with Clojure, Second Edition",
+ ! published by The Pragmatic Bookshelf.
+ ! Copyrights apply to this code. It may not be used to create training material,
+ ! courses, books, articles, and the like. Contact us if you are in doubt.
+ ! We make no guarantees that this code is fit for any purpose.
+ ! Visit http://www.pragmaticprogrammer.com/titles/dswdcloj2 for more book information.
+-->
 <html>
   <head>
     <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -29,6 +37,12 @@
                       home
                       </a>
                   </li>
+                  <li class="nav-item">
+                      <a href="{{servlet-context}}/about"
+                         class="nav-link{% ifequal page "about.html" %} active{%endifequal%}">
+                      about
+                      </a>
+                  </li>
               </ul>
           </div>
       </nav>
@@ -43,6 +57,10 @@
     {% script "/assets/tether/dist/js/tether.min.js" %}
     {% script "/assets/bootstrap/js/bootstrap.min.js" %}
 
+    <script type="text/javascript">
+      var context = "{{servlet-context}}";
+    </script>
+    {% script "/js/app.js" %}
     {% block page-scripts %}
     {% endblock %}
   </body>
