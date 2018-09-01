@@ -1,7 +1,8 @@
 (ns guestbook.core
   (:require 
     [reagent.core :as reagent :refer [atom]]
-    [ajax.core :refer [GET POST]]))
+    [guestbook.ws :as ws]
+    [ajax.core :refer [GET]]))
 
 (defn get-messages [messages]
   (GET "/messages"
@@ -22,55 +23,51 @@
   (when-let [error (id @errors)]
     [:div.alert.alert-danger (clojure.string/join error)]))
 
-(defn send-message! [messages fields errors]
-  (POST "/message" 
-        {:params @fields
-         :headers {"Accept" "application/transit+json"
-                   "x-csrf-token" (.-value (.getElementById js/document "token"))}
-         :handler #(do
-                     (.log js/console (str "response: " %))
-                     (get-messages messages)
-                     ; (swap! messages conj (assoc @fields :timestamp (js/Date.)) )
-                     (reset! errors nil))
-         :error-handler #(do
-                           (.log js/console (str "error: " %))
-                           (reset! errors (get-in % [:response :errors])))}))
+(defn message-form [fields errors]
+  [:div.content 
+   [errors-component errors :server-error]
+   [:div.form-group
+    [errors-component errors :name]
+    [:p "Name:"
+     [:input.form-control 
+      {:type :text
+       :name :name
+       :on-change #(swap! fields assoc :name (-> % .-target .-value))
+       :value (:name @fields)}]]
 
-(defn message-from [messages]
-  (let [fields (atom {})
-        errors (atom nil)]
-    (fn []
-      [:div.content 
-       [errors-component errors :server-error]
-       [:div.form-group
-        [errors-component errors :name]
-        [:p "Name:"
-         [:input.form-control 
-          {:type :text
-           :name :name
-           :on-change #(swap! fields assoc :name (-> % .-target .-value))
-           :value (:name @fields)}]]
+    [errors-component errors :message]
+    [:p "Message:"
+     [:textarea.form-control {:rows 4 
+                              :cols 50 
+                              :name :message 
+                              :on-change #(swap! fields assoc :message (-> % .-target .-value))
+                              :value (:message @fields)}]]
 
-        [errors-component errors :message]
-        [:p "Message:"
-         [:textarea.form-control {:rows 4 
-                                  :cols 50 
-                                  :name :message 
-                                  :on-change #(swap! fields assoc :message (-> % .-target .-value))
-                                  :value (:message @fields)}]]
+    [:input.btn.btn-primary 
+     {:type :submit 
+      :on-click #(ws/send-message! @fields)
+      :value "Comment!"}]]])
 
-        [:input.btn.btn-primary 
-         {:type :submit 
-          :on-click #(send-message! messages fields errors)
-          :value "Comment!"}]]])))
+(defn response-handler [messages fields errors]
+  (fn [message]
+    (if-let [response-errors (:errors message)]
+      (reset! errors response-errors)
+      (do
+        (reset! fields nil)
+        (reset! errors nil)
+        (swap! messages conj message)))))
 
 (defn home []
-  (let [messages (atom nil)]
+  (let [messages (atom nil)
+        fields (atom nil)
+        errors (atom nil)]
+    (ws/connect! (str "ws://" (.-host js/location) "/ws")
+                 (response-handler messages fields errors))
     (get-messages messages)
     (fn []
       [:div
        [:div.row
-        [:div.span12 [message-from messages]]]
+        [:div.span12 [message-form fields errors]]]
        [:div.row
         [:div.span12
          [messages-list messages]]]])))

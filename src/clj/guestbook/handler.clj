@@ -2,6 +2,7 @@
   (:require [compojure.core :refer [routes wrap-routes]]
             [guestbook.layout :refer [error-page]]
             [guestbook.routes.home :refer [home-routes]]
+            [guestbook.routes.ws :refer [ws-routes]]
             [compojure.route :as route]
             [guestbook.env :refer [defaults]]
             [mount.core :as mount]
@@ -13,6 +14,7 @@
 
 (def app-routes
   (routes
+    #'ws-routes
     (-> #'home-routes
         (wrap-routes middleware/wrap-csrf)
         (wrap-routes middleware/wrap-formats))
